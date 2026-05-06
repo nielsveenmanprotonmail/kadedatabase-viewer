@@ -380,7 +380,8 @@ export function LocationsTable() {
         const filterType = (colDef as { meta?: { filterType?: string } })?.meta?.filterType;
 
         if (filterType === "boolean") {
-          q = q.eq(f.id, val === "true");
+          if (val === "null") q = q.is(f.id, null);
+          else q = q.eq(f.id, val === "true");
         } else if (filterType === "select") {
           q = q.eq(f.id, val);
         } else if (filterType === "gte") {
@@ -532,6 +533,7 @@ export function LocationsTable() {
                           <option value="">Alle</option>
                           <option value="true">Ja</option>
                           <option value="false">Nee</option>
+                          <option value="null">Onbekend</option>
                         </select>
                       ) : filterType === "select" ? (
                         <select
