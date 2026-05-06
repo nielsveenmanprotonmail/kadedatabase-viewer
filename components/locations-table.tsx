@@ -168,17 +168,17 @@ const CEMT_OPTIONS = ["0", "I", "II", "III", "IV", "Va", "Vb", "VIa", "VIb", "VI
 
 const COLUMNS = [
   col.accessor("naam", {
-    header: "Naam",
+    header: "Naam", size: 180,
     meta: { filterType: "text" },
     cell: (i) => <span className="font-medium">{i.getValue() ?? "—"}</span>,
   }),
   col.accessor("plaatsnaam", {
-    header: "Plaats",
+    header: "Plaats", size: 120,
     meta: { filterType: "text" },
     cell: (i) => i.getValue() ?? <span className="text-gray-300">—</span>,
   }),
   col.accessor("type_kade", {
-    header: "Type kade",
+    header: "Type kade", size: 130,
     meta: { filterType: "select", filterOptions: TYPE_KADE_OPTIONS },
     cell: (i) => {
       const v = i.getValue();
@@ -186,119 +186,119 @@ const COLUMNS = [
     },
   }),
   col.accessor("heeft_overslag", {
-    header: "Overslag",
+    header: "Overslag", size: 85,
     meta: { filterType: "boolean" },
     cell: (i) => <BoolCell value={i.getValue()} />,
   }),
   col.accessor("afmeren_mogelijk", {
-    header: "Afmeren",
+    header: "Afmeren", size: 85,
     meta: { filterType: "boolean" },
     cell: (i) => <BoolCell value={i.getValue()} />,
   }),
   col.accessor("primaire_bron", {
-    header: "Bron",
+    header: "Bron", size: 85,
     meta: { filterType: "select", filterOptions: BRON_OPTIONS },
     cell: (i) => <span className="text-xs text-navy/60">{i.getValue() ?? "—"}</span>,
   }),
   col.accessor("verificatiestatus", {
-    header: "Status",
+    header: "Status", size: 110,
     meta: { filterType: "select", filterOptions: STATUS_OPTIONS },
     cell: (i) => <StatusBadge value={i.getValue()} />,
   }),
   // ── Hidden by default ──────────────────────────────────────────────────────
-  col.accessor("gemeente", { header: "Gemeente", meta: { filterType: "text" } }),
-  col.accessor("vaarweg",  { header: "Vaarweg",  meta: { filterType: "text" } }),
+  col.accessor("gemeente", { header: "Gemeente", size: 120, meta: { filterType: "text" } }),
+  col.accessor("vaarweg",  { header: "Vaarweg",  size: 140, meta: { filterType: "text" } }),
   col.accessor("kilometerraai", {
-    header: "Km-raai",
+    header: "Km-raai", size: 85,
     meta: { filterType: "gte" },
     cell: (i) => <NumCell value={i.getValue()} />,
   }),
   col.accessor("cemt_klasse", {
-    header: "CEMT",
+    header: "CEMT", size: 75,
     meta: { filterType: "select", filterOptions: CEMT_OPTIONS },
   }),
-  col.accessor("isrs_code",  { header: "ISRS",   meta: { filterType: "text" } }),
-  col.accessor("fis_id",     { header: "FIS-ID", meta: { filterType: "text" } }),
-  col.accessor("btb_code",   { header: "BTB",    meta: { filterType: "text" } }),
+  col.accessor("isrs_code",  { header: "ISRS",   size: 130, meta: { filterType: "text" } }),
+  col.accessor("fis_id",     { header: "FIS-ID", size: 85,  meta: { filterType: "text" } }),
+  col.accessor("btb_code",   { header: "BTB",    size: 85,  meta: { filterType: "text" } }),
   col.accessor("kadelengte_m", {
-    header: "Kadelengte (m)",
+    header: "Kadelengte (m)", size: 130,
     meta: { filterType: "gte" },
     cell: (i) => <NumCell value={i.getValue()} />,
   }),
   col.accessor("kadebreedte_m", {
-    header: "Kadebreedte (m)",
+    header: "Kadebreedte (m)", size: 130,
     meta: { filterType: "gte" },
     cell: (i) => <NumCell value={i.getValue()} />,
   }),
   col.accessor("max_scheepslengte_m", {
-    header: "Max. scheepslengte (m)",
+    header: "Max. scheepslengte (m)", size: 160,
     meta: { filterType: "gte" },
     cell: (i) => <NumCell value={i.getValue()} />,
   }),
   col.accessor("max_scheepsbreedte_m", {
-    header: "Max. scheepsbreedte (m)",
+    header: "Max. scheepsbreedte (m)", size: 165,
     meta: { filterType: "gte" },
     cell: (i) => <NumCell value={i.getValue()} />,
   }),
   col.accessor("max_diepgang_m", {
-    header: "Max. diepgang (m)",
+    header: "Max. diepgang (m)", size: 140,
     meta: { filterType: "gte" },
     cell: (i) => <NumCell value={i.getValue()} />,
   }),
   col.accessor("max_doorvaarthoogte_m", {
-    header: "Max. doorvaarthoogte (m)",
+    header: "Max. doorvaarthoogte (m)", size: 165,
     meta: { filterType: "gte" },
     cell: (i) => <NumCell value={i.getValue()} />,
   }),
   col.accessor("max_duwvaartlengte_m", {
-    header: "Max. duwvaartlengte (m)",
+    header: "Max. duwvaartlengte (m)", size: 160,
     meta: { filterType: "gte" },
     cell: (i) => <NumCell value={i.getValue()} />,
   }),
   col.accessor("max_duwvaartbreedte_m", {
-    header: "Max. duwvaartbreedte (m)",
+    header: "Max. duwvaartbreedte (m)", size: 165,
     meta: { filterType: "gte" },
     cell: (i) => <NumCell value={i.getValue()} />,
   }),
   col.accessor("aantal_bolders", {
-    header: "Bolders",
+    header: "Bolders", size: 80,
     meta: { filterType: "gte" },
     cell: (i) => <NumCell value={i.getValue()} />,
   }),
-  col.accessor("adn_klasse", { header: "ADN", meta: { filterType: "text" } }),
-  col.accessor("droge_bulk",      { header: "Droge bulk",  meta: { filterType: "boolean" }, cell: (i) => <BoolCell value={i.getValue()} /> }),
-  col.accessor("natte_bulk",      { header: "Natte bulk",  meta: { filterType: "boolean" }, cell: (i) => <BoolCell value={i.getValue()} /> }),
-  col.accessor("containers",      { header: "Containers",  meta: { filterType: "boolean" }, cell: (i) => <BoolCell value={i.getValue()} /> }),
-  col.accessor("break_bulk",      { header: "Break bulk",  meta: { filterType: "boolean" }, cell: (i) => <BoolCell value={i.getValue()} /> }),
-  col.accessor("passagiers",      { header: "Passagiers",  meta: { filterType: "boolean" }, cell: (i) => <BoolCell value={i.getValue()} /> }),
-  col.accessor("overig_goederen", { header: "Overig",      meta: { filterType: "boolean" }, cell: (i) => <BoolCell value={i.getValue()} /> }),
-  col.accessor("brandstoflevering",{ header: "Brandstof",  meta: { filterType: "boolean" }, cell: (i) => <BoolCell value={i.getValue()} /> }),
-  col.accessor("pomp",            { header: "Pomp",        meta: { filterType: "boolean" }, cell: (i) => <BoolCell value={i.getValue()} /> }),
-  col.accessor("vaste_kraan",     { header: "Vaste kraan", meta: { filterType: "boolean" }, cell: (i) => <BoolCell value={i.getValue()} /> }),
-  col.accessor("mobiele_kraan",   { header: "Mob. kraan",  meta: { filterType: "boolean" }, cell: (i) => <BoolCell value={i.getValue()} /> }),
+  col.accessor("adn_klasse", { header: "ADN", size: 75, meta: { filterType: "text" } }),
+  col.accessor("droge_bulk",      { header: "Droge bulk",  size: 90, meta: { filterType: "boolean" }, cell: (i) => <BoolCell value={i.getValue()} /> }),
+  col.accessor("natte_bulk",      { header: "Natte bulk",  size: 90, meta: { filterType: "boolean" }, cell: (i) => <BoolCell value={i.getValue()} /> }),
+  col.accessor("containers",      { header: "Containers",  size: 90, meta: { filterType: "boolean" }, cell: (i) => <BoolCell value={i.getValue()} /> }),
+  col.accessor("break_bulk",      { header: "Break bulk",  size: 90, meta: { filterType: "boolean" }, cell: (i) => <BoolCell value={i.getValue()} /> }),
+  col.accessor("passagiers",      { header: "Passagiers",  size: 90, meta: { filterType: "boolean" }, cell: (i) => <BoolCell value={i.getValue()} /> }),
+  col.accessor("overig_goederen", { header: "Overig",      size: 75, meta: { filterType: "boolean" }, cell: (i) => <BoolCell value={i.getValue()} /> }),
+  col.accessor("brandstoflevering",{ header: "Brandstof",  size: 90, meta: { filterType: "boolean" }, cell: (i) => <BoolCell value={i.getValue()} /> }),
+  col.accessor("pomp",            { header: "Pomp",        size: 70, meta: { filterType: "boolean" }, cell: (i) => <BoolCell value={i.getValue()} /> }),
+  col.accessor("vaste_kraan",     { header: "Vaste kraan", size: 95, meta: { filterType: "boolean" }, cell: (i) => <BoolCell value={i.getValue()} /> }),
+  col.accessor("mobiele_kraan",   { header: "Mob. kraan",  size: 95, meta: { filterType: "boolean" }, cell: (i) => <BoolCell value={i.getValue()} /> }),
   col.accessor("opmerking", {
-    header: "Opmerking",
+    header: "Opmerking", size: 200,
     meta: { filterType: "text" },
     cell: (i) => <span className="text-xs text-navy/50 max-w-xs truncate block">{i.getValue() ?? "—"}</span>,
   }),
   col.accessor("gewijzigd_door_bron", {
-    header: "Gewijzigd door",
+    header: "Gewijzigd door", size: 130,
     meta: { filterType: "text" },
     cell: (i) => <span className="text-xs text-navy/40">{i.getValue() ?? "—"}</span>,
   }),
   col.accessor("bijgewerkt_op", {
-    header: "Bijgewerkt",
+    header: "Bijgewerkt", size: 100,
     cell: (i) => {
       const v = i.getValue();
       return v ? <span className="text-xs text-navy/40">{new Date(v).toLocaleDateString("nl-NL")}</span> : <span className="text-gray-300">—</span>;
     },
   }),
   col.accessor("lat", {
-    header: "Lat",
+    header: "Lat", size: 95,
     cell: (i) => { const v = i.getValue(); return v != null ? <span className="text-xs font-mono">{Number(v).toFixed(5)}</span> : <span className="text-gray-300">—</span>; },
   }),
   col.accessor("lon", {
-    header: "Lon",
+    header: "Lon", size: 95,
     cell: (i) => { const v = i.getValue(); return v != null ? <span className="text-xs font-mono">{Number(v).toFixed(5)}</span> : <span className="text-gray-300">—</span>; },
   }),
 ];
@@ -409,6 +409,8 @@ export function LocationsTable() {
     manualPagination: true,
     manualSorting: true,
     manualFiltering: true,
+    enableColumnResizing: true,
+    columnResizeMode: "onChange",
     pageCount: Math.ceil(total / PAGE_SIZE),
     state: { sorting, columnVisibility, columnFilters },
     onSortingChange: (u) => { setSorting(u); setPageIndex(0); },
@@ -485,7 +487,10 @@ export function LocationsTable() {
       {/* Table */}
       <div className="bg-white rounded-lg border border-gray-light shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm border-collapse">
+          <table
+            className="text-sm border-collapse"
+            style={{ width: table.getTotalSize(), tableLayout: "fixed" }}
+          >
             <thead>
               {/* Sort header row */}
               {table.getHeaderGroups().map((hg) => (
@@ -496,6 +501,7 @@ export function LocationsTable() {
                       <th
                         key={header.id}
                         className="px-4 py-3 text-left text-xs font-semibold text-white/80 uppercase tracking-wide whitespace-nowrap select-none cursor-pointer hover:text-white transition-colors"
+                        style={{ width: header.getSize(), position: "relative" }}
                         onClick={header.column.getToggleSortingHandler()}
                       >
                         <span className="flex items-center gap-1">
@@ -508,6 +514,15 @@ export function LocationsTable() {
                             <ChevronsUpDown className="w-3 h-3 text-white/25" />
                           )}
                         </span>
+                        <div
+                          onMouseDown={header.getResizeHandler()}
+                          onTouchStart={header.getResizeHandler()}
+                          onClick={(e) => e.stopPropagation()}
+                          className={cn(
+                            "absolute right-0 top-0 h-full w-1.5 cursor-col-resize select-none touch-none",
+                            header.column.getIsResizing() ? "bg-blue" : "hover:bg-white/30"
+                          )}
+                        />
                       </th>
                     );
                   })}
@@ -523,7 +538,7 @@ export function LocationsTable() {
                   const inputCls = "w-full text-xs px-2 py-1 rounded border border-gray-light bg-white focus:outline-none focus:border-blue focus:ring-1 focus:ring-blue/20";
 
                   return (
-                    <th key={header.id} className="px-2 py-1.5 font-normal">
+                    <th key={header.id} className="px-2 py-1.5 font-normal" style={{ width: header.getSize() }}>
                       {filterType === "boolean" ? (
                         <select
                           value={filterValue}
@@ -594,8 +609,10 @@ export function LocationsTable() {
                     )}
                   >
                     {row.getVisibleCells().map((cell) => (
-                      <td key={cell.id} className="px-4 py-2.5 whitespace-nowrap">
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      <td key={cell.id} className="px-4 py-2.5 overflow-hidden" style={{ width: cell.column.getSize() }}>
+                        <div className="truncate">
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </div>
                       </td>
                     ))}
                   </tr>
