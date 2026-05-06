@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -8,6 +8,7 @@ import {
   createColumnHelper,
   type SortingState,
   type VisibilityState,
+  type ColumnFiltersState,
 } from "@tanstack/react-table";
 import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
@@ -16,12 +17,22 @@ import {
   ChevronDown,
   ChevronsUpDown,
   Columns,
-  Search,
   ChevronLeft,
   ChevronRight,
+  X,
 } from "lucide-react";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── TanStack meta augmentation ───────────────────────────────────────────────
+
+declare module "@tanstack/react-table" {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  interface ColumnMeta<TData, TValue> {
+    filterType?: "text" | "boolean" | "select" | "gte";
+    filterOptions?: { value: string; label: string }[];
+  }
+}
+
+// ─── Type ────────────────────────────────────────────────────────────────────
 
 export type Location = {
   id: string;
@@ -85,7 +96,7 @@ export type Location = {
   gewijzigd_door_bron: string | null;
 };
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Cell helpers ─────────────────────────────────────────────────────────────
 
 const TYPE_KADE_LABEL: Record<string, string> = {
   verharde_kade: "Verharde kade",
@@ -114,12 +125,7 @@ function StatusBadge({ value }: { value: string | null }) {
     geverifieerd: "bg-lime/40 text-navy-deep border-lime/50 font-semibold",
   };
   return (
-    <span
-      className={cn(
-        "inline-block px-2 py-0.5 rounded text-xs border",
-        styles[value] ?? "bg-gray-light text-navy/60 border-gray-light"
-      )}
-    >
+    <span className={cn("inline-block px-2 py-0.5 rounded text-xs border", styles[value] ?? "bg-gray-light text-navy/60 border-gray-light")}>
       {value}
     </span>
   );
@@ -128,224 +134,186 @@ function StatusBadge({ value }: { value: string | null }) {
 function NumCell({ value }: { value: number | null }) {
   if (value === null || value === undefined)
     return <span className="text-gray-300 select-none">—</span>;
-  return <span>{value.toLocaleString("nl-NL")}</span>;
+  return <>{value.toLocaleString("nl-NL")}</>;
 }
 
 // ─── Column definitions ───────────────────────────────────────────────────────
 
 const col = createColumnHelper<Location>();
 
+const TYPE_KADE_OPTIONS = [
+  { value: "verharde_kade",    label: "Verharde kade" },
+  { value: "wachtplaats",      label: "Wachtplaats" },
+  { value: "onverharde_kade",  label: "Onverharde kade" },
+  { value: "steiger",          label: "Steiger" },
+  { value: "aanlegpaal",       label: "Aanlegpaal" },
+  { value: "drijvende_steiger",label: "Drijvende steiger" },
+];
+
+const STATUS_OPTIONS = [
+  { value: "automatisch",  label: "Automatisch" },
+  { value: "handmatig",    label: "Handmatig" },
+  { value: "geverifieerd", label: "Geverifieerd" },
+];
+
+const BRON_OPTIONS = [
+  { value: "FIS/FRP", label: "FIS/FRP" },
+  { value: "EuRIS",   label: "EuRIS" },
+  { value: "BTB",     label: "BTB" },
+];
+
+const CEMT_OPTIONS = ["0", "I", "II", "III", "IV", "Va", "Vb", "VIa", "VIb", "VIc", "VII"].map(
+  (v) => ({ value: v, label: v })
+);
+
 const COLUMNS = [
   col.accessor("naam", {
     header: "Naam",
+    meta: { filterType: "text" },
     cell: (i) => <span className="font-medium">{i.getValue() ?? "—"}</span>,
   }),
   col.accessor("plaatsnaam", {
     header: "Plaats",
+    meta: { filterType: "text" },
     cell: (i) => i.getValue() ?? <span className="text-gray-300">—</span>,
   }),
   col.accessor("type_kade", {
     header: "Type kade",
+    meta: { filterType: "select", filterOptions: TYPE_KADE_OPTIONS },
     cell: (i) => {
       const v = i.getValue();
-      return v ? (
-        <span className="text-xs">{TYPE_KADE_LABEL[v] ?? v}</span>
-      ) : (
-        <span className="text-gray-300">—</span>
-      );
+      return v ? <span className="text-xs">{TYPE_KADE_LABEL[v] ?? v}</span> : <span className="text-gray-300">—</span>;
     },
   }),
   col.accessor("heeft_overslag", {
     header: "Overslag",
+    meta: { filterType: "boolean" },
     cell: (i) => <BoolCell value={i.getValue()} />,
   }),
   col.accessor("afmeren_mogelijk", {
     header: "Afmeren",
+    meta: { filterType: "boolean" },
     cell: (i) => <BoolCell value={i.getValue()} />,
   }),
   col.accessor("primaire_bron", {
     header: "Bron",
-    cell: (i) => (
-      <span className="text-xs text-navy/60">{i.getValue() ?? "—"}</span>
-    ),
+    meta: { filterType: "select", filterOptions: BRON_OPTIONS },
+    cell: (i) => <span className="text-xs text-navy/60">{i.getValue() ?? "—"}</span>,
   }),
   col.accessor("verificatiestatus", {
     header: "Status",
+    meta: { filterType: "select", filterOptions: STATUS_OPTIONS },
     cell: (i) => <StatusBadge value={i.getValue()} />,
   }),
   // ── Hidden by default ──────────────────────────────────────────────────────
-  col.accessor("gemeente", { header: "Gemeente" }),
-  col.accessor("vaarweg", { header: "Vaarweg" }),
+  col.accessor("gemeente", { header: "Gemeente", meta: { filterType: "text" } }),
+  col.accessor("vaarweg",  { header: "Vaarweg",  meta: { filterType: "text" } }),
   col.accessor("kilometerraai", {
     header: "Km-raai",
+    meta: { filterType: "gte" },
     cell: (i) => <NumCell value={i.getValue()} />,
   }),
-  col.accessor("cemt_klasse", { header: "CEMT" }),
-  col.accessor("isrs_code", { header: "ISRS" }),
-  col.accessor("fis_id", { header: "FIS-ID" }),
-  col.accessor("btb_code", { header: "BTB" }),
+  col.accessor("cemt_klasse", {
+    header: "CEMT",
+    meta: { filterType: "select", filterOptions: CEMT_OPTIONS },
+  }),
+  col.accessor("isrs_code",  { header: "ISRS",   meta: { filterType: "text" } }),
+  col.accessor("fis_id",     { header: "FIS-ID", meta: { filterType: "text" } }),
+  col.accessor("btb_code",   { header: "BTB",    meta: { filterType: "text" } }),
   col.accessor("kadelengte_m", {
     header: "Kadelengte (m)",
+    meta: { filterType: "gte" },
     cell: (i) => <NumCell value={i.getValue()} />,
   }),
   col.accessor("kadebreedte_m", {
     header: "Kadebreedte (m)",
+    meta: { filterType: "gte" },
     cell: (i) => <NumCell value={i.getValue()} />,
   }),
   col.accessor("max_scheepslengte_m", {
     header: "Max. scheepslengte (m)",
+    meta: { filterType: "gte" },
     cell: (i) => <NumCell value={i.getValue()} />,
   }),
   col.accessor("max_scheepsbreedte_m", {
     header: "Max. scheepsbreedte (m)",
+    meta: { filterType: "gte" },
     cell: (i) => <NumCell value={i.getValue()} />,
   }),
   col.accessor("max_diepgang_m", {
     header: "Max. diepgang (m)",
+    meta: { filterType: "gte" },
     cell: (i) => <NumCell value={i.getValue()} />,
   }),
   col.accessor("max_doorvaarthoogte_m", {
     header: "Max. doorvaarthoogte (m)",
+    meta: { filterType: "gte" },
     cell: (i) => <NumCell value={i.getValue()} />,
   }),
   col.accessor("max_duwvaartlengte_m", {
     header: "Max. duwvaartlengte (m)",
+    meta: { filterType: "gte" },
     cell: (i) => <NumCell value={i.getValue()} />,
   }),
   col.accessor("max_duwvaartbreedte_m", {
     header: "Max. duwvaartbreedte (m)",
+    meta: { filterType: "gte" },
     cell: (i) => <NumCell value={i.getValue()} />,
   }),
   col.accessor("aantal_bolders", {
     header: "Bolders",
+    meta: { filterType: "gte" },
     cell: (i) => <NumCell value={i.getValue()} />,
   }),
-  col.accessor("adn_klasse", { header: "ADN" }),
-  col.accessor("droge_bulk", {
-    header: "Droge bulk",
-    cell: (i) => <BoolCell value={i.getValue()} />,
-  }),
-  col.accessor("natte_bulk", {
-    header: "Natte bulk",
-    cell: (i) => <BoolCell value={i.getValue()} />,
-  }),
-  col.accessor("containers", {
-    header: "Containers",
-    cell: (i) => <BoolCell value={i.getValue()} />,
-  }),
-  col.accessor("break_bulk", {
-    header: "Break bulk",
-    cell: (i) => <BoolCell value={i.getValue()} />,
-  }),
-  col.accessor("passagiers", {
-    header: "Passagiers",
-    cell: (i) => <BoolCell value={i.getValue()} />,
-  }),
-  col.accessor("overig_goederen", {
-    header: "Overig",
-    cell: (i) => <BoolCell value={i.getValue()} />,
-  }),
-  col.accessor("brandstoflevering", {
-    header: "Brandstof",
-    cell: (i) => <BoolCell value={i.getValue()} />,
-  }),
-  col.accessor("pomp", {
-    header: "Pomp",
-    cell: (i) => <BoolCell value={i.getValue()} />,
-  }),
-  col.accessor("vaste_kraan", {
-    header: "Vaste kraan",
-    cell: (i) => <BoolCell value={i.getValue()} />,
-  }),
-  col.accessor("mobiele_kraan", {
-    header: "Mobiele kraan",
-    cell: (i) => <BoolCell value={i.getValue()} />,
-  }),
+  col.accessor("adn_klasse", { header: "ADN", meta: { filterType: "text" } }),
+  col.accessor("droge_bulk",      { header: "Droge bulk",  meta: { filterType: "boolean" }, cell: (i) => <BoolCell value={i.getValue()} /> }),
+  col.accessor("natte_bulk",      { header: "Natte bulk",  meta: { filterType: "boolean" }, cell: (i) => <BoolCell value={i.getValue()} /> }),
+  col.accessor("containers",      { header: "Containers",  meta: { filterType: "boolean" }, cell: (i) => <BoolCell value={i.getValue()} /> }),
+  col.accessor("break_bulk",      { header: "Break bulk",  meta: { filterType: "boolean" }, cell: (i) => <BoolCell value={i.getValue()} /> }),
+  col.accessor("passagiers",      { header: "Passagiers",  meta: { filterType: "boolean" }, cell: (i) => <BoolCell value={i.getValue()} /> }),
+  col.accessor("overig_goederen", { header: "Overig",      meta: { filterType: "boolean" }, cell: (i) => <BoolCell value={i.getValue()} /> }),
+  col.accessor("brandstoflevering",{ header: "Brandstof",  meta: { filterType: "boolean" }, cell: (i) => <BoolCell value={i.getValue()} /> }),
+  col.accessor("pomp",            { header: "Pomp",        meta: { filterType: "boolean" }, cell: (i) => <BoolCell value={i.getValue()} /> }),
+  col.accessor("vaste_kraan",     { header: "Vaste kraan", meta: { filterType: "boolean" }, cell: (i) => <BoolCell value={i.getValue()} /> }),
+  col.accessor("mobiele_kraan",   { header: "Mob. kraan",  meta: { filterType: "boolean" }, cell: (i) => <BoolCell value={i.getValue()} /> }),
   col.accessor("opmerking", {
     header: "Opmerking",
-    cell: (i) => (
-      <span className="text-xs text-navy/50 max-w-xs truncate block">
-        {i.getValue() ?? "—"}
-      </span>
-    ),
+    meta: { filterType: "text" },
+    cell: (i) => <span className="text-xs text-navy/50 max-w-xs truncate block">{i.getValue() ?? "—"}</span>,
   }),
   col.accessor("gewijzigd_door_bron", {
     header: "Gewijzigd door",
-    cell: (i) => (
-      <span className="text-xs text-navy/40">{i.getValue() ?? "—"}</span>
-    ),
+    meta: { filterType: "text" },
+    cell: (i) => <span className="text-xs text-navy/40">{i.getValue() ?? "—"}</span>,
   }),
   col.accessor("bijgewerkt_op", {
     header: "Bijgewerkt",
     cell: (i) => {
       const v = i.getValue();
-      return v ? (
-        <span className="text-xs text-navy/40">
-          {new Date(v).toLocaleDateString("nl-NL")}
-        </span>
-      ) : (
-        <span className="text-gray-300">—</span>
-      );
+      return v ? <span className="text-xs text-navy/40">{new Date(v).toLocaleDateString("nl-NL")}</span> : <span className="text-gray-300">—</span>;
     },
   }),
   col.accessor("lat", {
     header: "Lat",
-    cell: (i) => {
-      const v = i.getValue();
-      return v != null ? (
-        <span className="text-xs font-mono">{Number(v).toFixed(5)}</span>
-      ) : (
-        <span className="text-gray-300">—</span>
-      );
-    },
+    cell: (i) => { const v = i.getValue(); return v != null ? <span className="text-xs font-mono">{Number(v).toFixed(5)}</span> : <span className="text-gray-300">—</span>; },
   }),
   col.accessor("lon", {
     header: "Lon",
-    cell: (i) => {
-      const v = i.getValue();
-      return v != null ? (
-        <span className="text-xs font-mono">{Number(v).toFixed(5)}</span>
-      ) : (
-        <span className="text-gray-300">—</span>
-      );
-    },
+    cell: (i) => { const v = i.getValue(); return v != null ? <span className="text-xs font-mono">{Number(v).toFixed(5)}</span> : <span className="text-gray-300">—</span>; },
   }),
 ];
 
-// Columns visible on first load
 const DEFAULT_VISIBILITY: VisibilityState = {
-  gemeente: false,
-  vaarweg: false,
-  kilometerraai: false,
-  cemt_klasse: false,
-  isrs_code: false,
-  fis_id: false,
-  btb_code: false,
-  kadelengte_m: false,
-  kadebreedte_m: false,
-  max_scheepslengte_m: false,
-  max_scheepsbreedte_m: false,
-  max_diepgang_m: false,
-  max_doorvaarthoogte_m: false,
-  max_duwvaartlengte_m: false,
-  max_duwvaartbreedte_m: false,
-  aantal_bolders: false,
-  adn_klasse: false,
-  droge_bulk: false,
-  natte_bulk: false,
-  containers: false,
-  break_bulk: false,
-  passagiers: false,
-  overig_goederen: false,
-  brandstoflevering: false,
-  pomp: false,
-  vaste_kraan: false,
-  mobiele_kraan: false,
-  opmerking: false,
-  gewijzigd_door_bron: false,
-  bijgewerkt_op: false,
-  lat: false,
-  lon: false,
+  gemeente: false, vaarweg: false, kilometerraai: false, cemt_klasse: false,
+  isrs_code: false, fis_id: false, btb_code: false,
+  kadelengte_m: false, kadebreedte_m: false,
+  max_scheepslengte_m: false, max_scheepsbreedte_m: false, max_diepgang_m: false,
+  max_doorvaarthoogte_m: false, max_duwvaartlengte_m: false, max_duwvaartbreedte_m: false,
+  aantal_bolders: false, adn_klasse: false,
+  droge_bulk: false, natte_bulk: false, containers: false, break_bulk: false,
+  passagiers: false, overig_goederen: false, brandstoflevering: false, pomp: false,
+  vaste_kraan: false, mobiele_kraan: false,
+  opmerking: false, gewijzigd_door_bron: false, bijgewerkt_op: false, lat: false, lon: false,
 };
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -358,32 +326,30 @@ export function LocationsTable() {
   const [loading, setLoading] = useState(true);
   const [pageIndex, setPageIndex] = useState(0);
   const [sorting, setSorting] = useState<SortingState>([{ id: "naam", desc: false }]);
-  const [search, setSearch] = useState("");
-  const [searchInput, setSearchInput] = useState("");
-  const [columnVisibility, setColumnVisibility] =
-    useState<VisibilityState>(DEFAULT_VISIBILITY);
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [debouncedFilters, setDebouncedFilters] = useState<ColumnFiltersState>([]);
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(DEFAULT_VISIBILITY);
   const [colMenuOpen, setColMenuOpen] = useState(false);
   const colMenuRef = useRef<HTMLDivElement>(null);
 
   // Close column menu on outside click
   useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (colMenuRef.current && !colMenuRef.current.contains(e.target as Node)) {
+    function handle(e: MouseEvent) {
+      if (colMenuRef.current && !colMenuRef.current.contains(e.target as Node))
         setColMenuOpen(false);
-      }
     }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
+    document.addEventListener("mousedown", handle);
+    return () => document.removeEventListener("mousedown", handle);
   }, []);
 
-  // Debounce search input
+  // Debounce column filters (300 ms)
   useEffect(() => {
     const t = setTimeout(() => {
-      setSearch(searchInput);
+      setDebouncedFilters(columnFilters);
       setPageIndex(0);
     }, 300);
     return () => clearTimeout(t);
-  }, [searchInput]);
+  }, [columnFilters]);
 
   // Fetch data
   useEffect(() => {
@@ -394,16 +360,36 @@ export function LocationsTable() {
       const from = pageIndex * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
 
-      let q = supabase
+      // Start query
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let q: any = supabase
         .from("locations")
         .select("*", { count: "exact" })
         .order(sortCol, { ascending: sortAsc })
         .range(from, to);
 
-      if (search.trim()) {
-        q = q.or(
-          `naam.ilike.%${search.trim()}%,plaatsnaam.ilike.%${search.trim()}%`
+      // Apply column filters
+      for (const f of debouncedFilters) {
+        const val = f.value as string;
+        if (!val && val !== "false") continue;
+
+        // Find meta for this column
+        const colDef = COLUMNS.find(
+          (c) => "accessorKey" in c && c.accessorKey === f.id
         );
+        const filterType = (colDef as { meta?: { filterType?: string } })?.meta?.filterType;
+
+        if (filterType === "boolean") {
+          q = q.eq(f.id, val === "true");
+        } else if (filterType === "select") {
+          q = q.eq(f.id, val);
+        } else if (filterType === "gte") {
+          const num = parseFloat(val);
+          if (!isNaN(num)) q = q.gte(f.id, num);
+        } else {
+          // text (default)
+          q = q.ilike(f.id, `%${val}%`);
+        }
       }
 
       const { data: rows, count } = await q;
@@ -412,7 +398,8 @@ export function LocationsTable() {
       setLoading(false);
     }
     load();
-  }, [pageIndex, sorting, search]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pageIndex, sorting, debouncedFilters]);
 
   const table = useReactTable({
     data,
@@ -420,15 +407,15 @@ export function LocationsTable() {
     getCoreRowModel: getCoreRowModel(),
     manualPagination: true,
     manualSorting: true,
+    manualFiltering: true,
     pageCount: Math.ceil(total / PAGE_SIZE),
-    state: { sorting, columnVisibility },
-    onSortingChange: (updater) => {
-      setSorting(updater);
-      setPageIndex(0);
-    },
+    state: { sorting, columnVisibility, columnFilters },
+    onSortingChange: (u) => { setSorting(u); setPageIndex(0); },
     onColumnVisibilityChange: setColumnVisibility,
+    onColumnFiltersChange: setColumnFilters,
   });
 
+  const hasActiveFilters = columnFilters.length > 0;
   const pageCount = Math.ceil(total / PAGE_SIZE);
   const from = total === 0 ? 0 : pageIndex * PAGE_SIZE + 1;
   const to = Math.min((pageIndex + 1) * PAGE_SIZE, total);
@@ -438,63 +425,59 @@ export function LocationsTable() {
 
       {/* Toolbar */}
       <div className="flex items-center justify-between gap-4">
-        {/* Search */}
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-navy/30" />
-          <input
-            type="text"
-            placeholder="Zoek op naam of plaats…"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-sm border border-gray-light rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue/30 focus:border-blue"
-          />
-        </div>
-
         <div className="flex items-center gap-3">
-          {/* Record count */}
-          <span className="text-sm text-navy/50 hidden sm:block">
+          <span className="text-sm text-navy/50">
             {loading ? "Laden…" : `${total.toLocaleString("nl-NL")} locaties`}
           </span>
-
-          {/* Column toggle */}
-          <div className="relative" ref={colMenuRef}>
+          {hasActiveFilters && (
             <button
-              onClick={() => setColMenuOpen((v) => !v)}
-              className={cn(
-                "flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md border transition-colors",
-                colMenuOpen
-                  ? "bg-navy text-white border-navy"
-                  : "bg-white text-navy border-gray-light hover:border-navy/30"
-              )}
+              onClick={() => setColumnFilters([])}
+              className="flex items-center gap-1 text-xs text-blue hover:text-navy transition-colors"
             >
-              <Columns className="w-4 h-4" />
-              Kolommen
+              <X className="w-3 h-3" />
+              Wis filters ({columnFilters.length})
             </button>
+          )}
+        </div>
 
-            {colMenuOpen && (
-              <div className="absolute right-0 top-full mt-1 z-30 bg-white border border-gray-light rounded-lg shadow-lg w-64 max-h-96 overflow-y-auto p-2">
-                <p className="text-xs font-semibold text-navy/40 uppercase tracking-wide px-2 py-1.5">
-                  Toon / verberg kolommen
-                </p>
-                {table.getAllLeafColumns().map((column) => (
-                  <label
-                    key={column.id}
-                    className="flex items-center gap-2.5 px-2 py-1.5 rounded cursor-pointer hover:bg-gray-light/50 text-sm text-navy"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={column.getIsVisible()}
-                      onChange={column.getToggleVisibilityHandler()}
-                      className="accent-blue w-3.5 h-3.5"
-                    />
-                    {typeof column.columnDef.header === "string"
-                      ? column.columnDef.header
-                      : column.id}
-                  </label>
-                ))}
-              </div>
+        {/* Column toggle */}
+        <div className="relative" ref={colMenuRef}>
+          <button
+            onClick={() => setColMenuOpen((v) => !v)}
+            className={cn(
+              "flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md border transition-colors",
+              colMenuOpen
+                ? "bg-navy text-white border-navy"
+                : "bg-white text-navy border-gray-light hover:border-navy/30"
             )}
-          </div>
+          >
+            <Columns className="w-4 h-4" />
+            Kolommen
+          </button>
+
+          {colMenuOpen && (
+            <div className="absolute right-0 top-full mt-1 z-30 bg-white border border-gray-light rounded-lg shadow-lg w-64 max-h-96 overflow-y-auto p-2">
+              <p className="text-xs font-semibold text-navy/40 uppercase tracking-wide px-2 py-1.5">
+                Toon / verberg kolommen
+              </p>
+              {table.getAllLeafColumns().map((column) => (
+                <label
+                  key={column.id}
+                  className="flex items-center gap-2.5 px-2 py-1.5 rounded cursor-pointer hover:bg-gray-light/50 text-sm text-navy"
+                >
+                  <input
+                    type="checkbox"
+                    checked={column.getIsVisible()}
+                    onChange={column.getToggleVisibilityHandler()}
+                    className="accent-blue w-3.5 h-3.5"
+                  />
+                  {typeof column.columnDef.header === "string"
+                    ? column.columnDef.header
+                    : column.id}
+                </label>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -503,6 +486,7 @@ export function LocationsTable() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm border-collapse">
             <thead>
+              {/* Sort header row */}
               {table.getHeaderGroups().map((hg) => (
                 <tr key={hg.id} className="bg-navy">
                   {hg.headers.map((header) => {
@@ -514,16 +498,13 @@ export function LocationsTable() {
                         onClick={header.column.getToggleSortingHandler()}
                       >
                         <span className="flex items-center gap-1">
-                          {flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
+                          {flexRender(header.column.columnDef.header, header.getContext())}
                           {sorted === "asc" ? (
                             <ChevronUp className="w-3 h-3 text-blue" />
                           ) : sorted === "desc" ? (
                             <ChevronDown className="w-3 h-3 text-blue" />
                           ) : (
-                            <ChevronsUpDown className="w-3 h-3 text-white/30" />
+                            <ChevronsUpDown className="w-3 h-3 text-white/25" />
                           )}
                         </span>
                       </th>
@@ -531,23 +512,73 @@ export function LocationsTable() {
                   })}
                 </tr>
               ))}
+
+              {/* Filter row */}
+              <tr className="bg-gray-light/40 border-b border-gray-light">
+                {table.getHeaderGroups()[0]?.headers.map((header) => {
+                  const filterType = header.column.columnDef.meta?.filterType;
+                  const filterOptions = header.column.columnDef.meta?.filterOptions;
+                  const filterValue = (header.column.getFilterValue() as string) ?? "";
+                  const inputCls = "w-full text-xs px-2 py-1 rounded border border-gray-light bg-white focus:outline-none focus:border-blue focus:ring-1 focus:ring-blue/20";
+
+                  return (
+                    <th key={header.id} className="px-2 py-1.5 font-normal">
+                      {filterType === "boolean" ? (
+                        <select
+                          value={filterValue}
+                          onChange={(e) => header.column.setFilterValue(e.target.value || undefined)}
+                          className={inputCls}
+                        >
+                          <option value="">Alle</option>
+                          <option value="true">Ja</option>
+                          <option value="false">Nee</option>
+                        </select>
+                      ) : filterType === "select" ? (
+                        <select
+                          value={filterValue}
+                          onChange={(e) => header.column.setFilterValue(e.target.value || undefined)}
+                          className={inputCls}
+                        >
+                          <option value="">Alle</option>
+                          {filterOptions?.map((o) => (
+                            <option key={o.value} value={o.value}>{o.label}</option>
+                          ))}
+                        </select>
+                      ) : filterType === "text" ? (
+                        <input
+                          type="text"
+                          value={filterValue}
+                          onChange={(e) => header.column.setFilterValue(e.target.value || undefined)}
+                          placeholder="Filter…"
+                          className={inputCls}
+                        />
+                      ) : filterType === "gte" ? (
+                        <input
+                          type="number"
+                          value={filterValue}
+                          onChange={(e) => header.column.setFilterValue(e.target.value || undefined)}
+                          placeholder="≥"
+                          className={inputCls}
+                        />
+                      ) : (
+                        <div className="py-1" />
+                      )}
+                    </th>
+                  );
+                })}
+              </tr>
             </thead>
+
             <tbody>
               {loading ? (
                 <tr>
-                  <td
-                    colSpan={table.getVisibleLeafColumns().length}
-                    className="px-4 py-12 text-center text-sm text-navy/40"
-                  >
+                  <td colSpan={table.getVisibleLeafColumns().length} className="px-4 py-12 text-center text-sm text-navy/40">
                     Laden…
                   </td>
                 </tr>
               ) : table.getRowModel().rows.length === 0 ? (
                 <tr>
-                  <td
-                    colSpan={table.getVisibleLeafColumns().length}
-                    className="px-4 py-12 text-center text-sm text-navy/40"
-                  >
+                  <td colSpan={table.getVisibleLeafColumns().length} className="px-4 py-12 text-center text-sm text-navy/40">
                     Geen locaties gevonden
                   </td>
                 </tr>
@@ -575,9 +606,7 @@ export function LocationsTable() {
 
       {/* Pagination */}
       <div className="flex items-center justify-between text-sm text-navy/60">
-        <span>
-          {total > 0 ? `${from}–${to} van ${total.toLocaleString("nl-NL")}` : ""}
-        </span>
+        <span>{total > 0 ? `${from}–${to} van ${total.toLocaleString("nl-NL")}` : ""}</span>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setPageIndex((p) => Math.max(0, p - 1))}
