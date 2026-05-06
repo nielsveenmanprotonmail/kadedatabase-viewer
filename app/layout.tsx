@@ -35,8 +35,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </div>
         </header>
 
-        {/* Tab navigation */}
-        <div className="bg-white border-b border-gray-light shadow-sm">
+        {/* Tab navigation — sticky */}
+        <div className="sticky top-0 z-[1001] bg-white border-b border-gray-light shadow-sm">
           <div className="max-w-screen-xl mx-auto px-6">
             <NavTabs />
           </div>
