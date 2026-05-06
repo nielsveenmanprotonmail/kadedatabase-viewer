@@ -1,35 +1,69 @@
 import type { Metadata } from "next";
-import { Geist } from "next/font/google";
 import "./globals.css";
 import { NavTabs } from "@/components/nav-tabs";
 
-const geist = Geist({ subsets: ["latin"], variable: "--font-geist-sans" });
-
 export const metadata: Metadata = {
-  title: "Kadedatabase",
+  title: "Kadedatabase | Topsector Logistiek",
   description: "Open database van overslaglocaties op het Nederlandse binnenwater",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="nl" className={`${geist.variable} h-full`}>
-      <body className="min-h-full flex flex-col bg-gray-50 text-gray-900 antialiased">
-        <header className="bg-white border-b border-gray-200 px-6 py-4">
-          <div className="max-w-screen-xl mx-auto">
-            <h1 className="text-xl font-semibold text-gray-900">Kadedatabase</h1>
-            <p className="text-sm text-gray-500 mt-0.5">
+    <html lang="nl" className="h-full">
+      <body className="min-h-full flex flex-col bg-gray-light/30 text-navy-deep antialiased">
+
+        {/* Header */}
+        <header className="bg-navy">
+          <div className="max-w-screen-xl mx-auto px-6 py-5 flex items-end justify-between">
+            <div>
+              <p className="text-xs font-semibold tracking-widest uppercase text-blue mb-1">
+                Topsector Logistiek
+              </p>
+              <h1 className="text-2xl font-bold text-white leading-tight">
+                Kadedatabase
+              </h1>
+            </div>
+            <p className="text-xs text-white/40 hidden sm:block pb-0.5">
               Overslaglocaties binnenvaart Nederland
             </p>
           </div>
+          {/* Tri-colour stripe */}
+          <div className="flex h-1">
+            <div className="flex-1 bg-blue" />
+            <div className="flex-1 bg-navy-deep" />
+            <div className="flex-1 bg-lime" />
+          </div>
         </header>
-        <div className="bg-white border-b border-gray-200">
+
+        {/* Tab navigation */}
+        <div className="bg-white border-b border-gray-light shadow-sm">
           <div className="max-w-screen-xl mx-auto px-6">
             <NavTabs />
           </div>
         </div>
-        <main className="flex-1 max-w-screen-xl mx-auto w-full px-6 py-6">
+
+        {/* Page content */}
+        <main className="flex-1 max-w-screen-xl mx-auto w-full px-6 py-8">
           {children}
         </main>
+
+        {/* Footer */}
+        <footer className="bg-navy mt-auto">
+          <div className="flex h-1">
+            <div className="flex-1 bg-blue" />
+            <div className="flex-1 bg-navy-deep" />
+            <div className="flex-1 bg-lime" />
+          </div>
+          <div className="max-w-screen-xl mx-auto px-6 py-4 flex items-center justify-between">
+            <p className="text-xs text-white/50">
+              Kadedatabase &copy; {new Date().getFullYear()} Topsector Logistiek
+            </p>
+            <p className="text-xs text-white/30">
+              Publieke data — PostgREST API beschikbaar
+            </p>
+          </div>
+        </footer>
+
       </body>
     </html>
   );
