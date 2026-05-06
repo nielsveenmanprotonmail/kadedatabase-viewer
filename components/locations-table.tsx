@@ -489,7 +489,7 @@ export function LocationsTable() {
         <div className="overflow-x-auto">
           <table
             className="text-sm border-collapse"
-            style={{ width: table.getTotalSize(), tableLayout: "fixed" }}
+            style={{ width: table.getTotalSize(), minWidth: "100%", tableLayout: "fixed" }}
           >
             <thead>
               {/* Sort header row */}
