@@ -12,6 +12,7 @@ import {
 } from "@tanstack/react-table";
 import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
+import { useSessionState } from "@/lib/use-session-state";
 import {
   ChevronUp,
   ChevronDown,
@@ -324,11 +325,11 @@ export function LocationsTable() {
   const [data, setData] = useState<Location[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [pageIndex, setPageIndex] = useState(0);
-  const [sorting, setSorting] = useState<SortingState>([{ id: "naam", desc: false }]);
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-  const [debouncedFilters, setDebouncedFilters] = useState<ColumnFiltersState>([]);
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(DEFAULT_VISIBILITY);
+  const [pageIndex, setPageIndex] = useSessionState("tabel:pageIndex", 0);
+  const [sorting, setSorting] = useSessionState<SortingState>("tabel:sorting", [{ id: "naam", desc: false }]);
+  const [columnFilters, setColumnFilters] = useSessionState<ColumnFiltersState>("tabel:columnFilters", []);
+  const [debouncedFilters, setDebouncedFilters] = useState<ColumnFiltersState>(columnFilters);
+  const [columnVisibility, setColumnVisibility] = useSessionState<VisibilityState>("tabel:columnVisibility", DEFAULT_VISIBILITY);
   const [colMenuOpen, setColMenuOpen] = useState(false);
   const colMenuRef = useRef<HTMLDivElement>(null);
 
@@ -342,14 +343,20 @@ export function LocationsTable() {
     return () => document.removeEventListener("mousedown", handle);
   }, []);
 
-  // Debounce column filters (300 ms)
+  // Debounce column filters (300 ms); bij mount zijn beide al gelijk (hersteld
+  // uit sessie), dus eerste run overslaan zodat pageIndex behouden blijft
+  const skipFirstDebounce = useRef(true);
   useEffect(() => {
+    if (skipFirstDebounce.current) {
+      skipFirstDebounce.current = false;
+      return;
+    }
     const t = setTimeout(() => {
       setDebouncedFilters(columnFilters);
       setPageIndex(0);
     }, 300);
     return () => clearTimeout(t);
-  }, [columnFilters]);
+  }, [columnFilters, setPageIndex]);
 
   // Fetch data
   useEffect(() => {
@@ -399,7 +406,6 @@ export function LocationsTable() {
       setLoading(false);
     }
     load();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pageIndex, sorting, debouncedFilters]);
 
   const table = useReactTable({

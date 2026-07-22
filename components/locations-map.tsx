@@ -10,6 +10,7 @@ import "leaflet.markercluster";
 import { Filter, X, Search } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
+import { useSessionState } from "@/lib/use-session-state";
 
 // ─── Custom marker icons (TSL colours) ───────────────────────────────────────
 
@@ -465,8 +466,8 @@ export function LocationsMap() {
   const [locations, setLocations] = useState<MapLocation[]>([]);
   const [loaded, setLoaded]       = useState(0);
   const [total, setTotal]         = useState<number | null>(null);
-  const [filters, setFilters]     = useState<Filters>(EMPTY_FILTERS);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [filters, setFilters]     = useSessionState<Filters>("kaart:filters", EMPTY_FILTERS);
+  const [sidebarOpen, setSidebarOpen] = useSessionState("kaart:sidebarOpen", false);
 
   useEffect(() => {
     async function fetchAll() {
