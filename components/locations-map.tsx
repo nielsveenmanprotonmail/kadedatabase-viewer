@@ -10,7 +10,20 @@ import "leaflet.markercluster";
 import { Filter, X, Search } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
-import { useSessionState } from "@/lib/use-session-state";
+import { useSessionState, writeSessionState, readSessionState } from "@/lib/use-session-state";
+import {
+  type MapFilters as Filters,
+  type TriState,
+  type CargoKey,
+  type ColumnFilter,
+  EMPTY_MAP_FILTERS as EMPTY_FILTERS,
+  isMapFiltersActive as isFiltersActive,
+  TYPE_KADE_LABEL,
+  MAP_FILTERS_KEY,
+  TABLE_FILTERS_KEY,
+  describeColumnFilter,
+  applyColumnFiltersToQuery,
+} from "@/lib/location-filters";
 
 // ─── Custom marker icons (TSL colours) ───────────────────────────────────────
 
@@ -56,15 +69,6 @@ type MapLocation = {
   overig_goederen: boolean | null;
 };
 
-const TYPE_KADE_LABEL: Record<string, string> = {
-  verharde_kade:     "Verharde kade",
-  wachtplaats:       "Wachtplaats",
-  onverharde_kade:   "Onverharde kade",
-  steiger:           "Steiger",
-  aanlegpaal:        "Aanlegpaal",
-  drijvende_steiger: "Drijvende steiger",
-};
-
 // ─── Filter options ──────────────────────────────────────────────────────────
 
 const TYPE_KADE_OPTIONS = Object.entries(TYPE_KADE_LABEL).map(([value, label]) => ({ value, label }));
@@ -81,8 +85,6 @@ const STATUS_OPTIONS = [
   { value: "geverifieerd", label: "Geverifieerd" },
 ];
 
-type CargoKey = "droge_bulk" | "natte_bulk" | "containers" | "break_bulk" | "passagiers" | "overig_goederen";
-
 const CARGO_OPTIONS: { value: CargoKey; label: string }[] = [
   { value: "droge_bulk",      label: "Droge bulk" },
   { value: "natte_bulk",      label: "Natte bulk" },
@@ -91,40 +93,6 @@ const CARGO_OPTIONS: { value: CargoKey; label: string }[] = [
   { value: "passagiers",      label: "Passagiers" },
   { value: "overig_goederen", label: "Overig" },
 ];
-
-type TriState = "alle" | "ja" | "nee";
-
-type Filters = {
-  search:            string;
-  typeKade:          string[];
-  bron:              string[];
-  status:            string[];
-  cargo:             CargoKey[];
-  heeftOverslag:     TriState;
-  afmerenMogelijk:   TriState;
-};
-
-const EMPTY_FILTERS: Filters = {
-  search:          "",
-  typeKade:        [],
-  bron:            [],
-  status:          [],
-  cargo:           [],
-  heeftOverslag:   "alle",
-  afmerenMogelijk: "alle",
-};
-
-function isFiltersActive(f: Filters): boolean {
-  return (
-    f.search.trim() !== "" ||
-    f.typeKade.length > 0 ||
-    f.bron.length > 0 ||
-    f.status.length > 0 ||
-    f.cargo.length > 0 ||
-    f.heeftOverslag !== "alle" ||
-    f.afmerenMogelijk !== "alle"
-  );
-}
 
 function matchTri(value: boolean | null, state: TriState): boolean {
   if (state === "alle") return true;
@@ -340,12 +308,14 @@ function FilterSection({ title, children }: { title: string; children: React.Rea
 }
 
 function FilterSidebar({
-  open, onClose, filters, setFilters, visibleCount, totalCount,
+  open, onClose, filters, setFilters, tableFilters, onClearTableFilters, visibleCount, totalCount,
 }: {
   open: boolean;
   onClose: () => void;
   filters: Filters;
   setFilters: (f: Filters) => void;
+  tableFilters: ColumnFilter[];
+  onClearTableFilters: () => void;
   visibleCount: number;
   totalCount: number;
 }) {
@@ -393,6 +363,26 @@ function FilterSidebar({
 
       {/* Filter body */}
       <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4">
+
+        {/* Actieve filters uit de Tabel-tab */}
+        {tableFilters.length > 0 && (
+          <div className="rounded-md border border-blue/25 bg-blue/5 px-3 py-2.5">
+            <p className="text-[10px] font-semibold text-blue uppercase tracking-widest mb-1.5">
+              Tabelfilters actief
+            </p>
+            <ul className="text-xs text-navy/80 flex flex-col gap-0.5 mb-2">
+              {tableFilters.map((f) => (
+                <li key={f.id}>{describeColumnFilter(f)}</li>
+              ))}
+            </ul>
+            <button
+              onClick={onClearTableFilters}
+              className="flex items-center gap-1 text-xs text-blue hover:text-navy transition-colors"
+            >
+              <X className="w-3 h-3" /> Wis tabelfilters
+            </button>
+          </div>
+        )}
 
         {/* Search */}
         <FilterSection title="Zoeken">
@@ -466,41 +456,63 @@ export function LocationsMap() {
   const [locations, setLocations] = useState<MapLocation[]>([]);
   const [loaded, setLoaded]       = useState(0);
   const [total, setTotal]         = useState<number | null>(null);
-  const [filters, setFilters]     = useSessionState<Filters>("kaart:filters", EMPTY_FILTERS);
+  const [filters, setFilters]     = useSessionState<Filters>(MAP_FILTERS_KEY, EMPTY_FILTERS);
   const [sidebarOpen, setSidebarOpen] = useSessionState("kaart:sidebarOpen", false);
+  // Filters die in de Tabel-tab zijn ingesteld, gelden ook hier
+  const [tableFilters, setTableFilters] = useState<ColumnFilter[]>(() =>
+    readSessionState(TABLE_FILTERS_KEY, [])
+  );
 
   useEffect(() => {
+    let cancelled = false;
+
     async function fetchAll() {
+      setLocations([]);
+      setLoaded(0);
+      setTotal(null);
+
       const BATCH = 1000;
       let from = 0;
       const acc: MapLocation[] = [];
 
-      const { count } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let countQ: any = supabase
         .from("locations")
         .select("id", { count: "exact", head: true });
+      countQ = applyColumnFiltersToQuery(countQ, tableFilters);
+      const { count } = await countQ;
+      if (cancelled) return;
       setTotal(count ?? 0);
 
-      while (true) {
-        const { data: rows } = await supabase
+      while (!cancelled) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let batchQ: any = supabase
           .from("locations")
           .select(
             "id,naam,plaatsnaam,lat,lon,type_kade,heeft_overslag,afmeren_mogelijk," +
             "primaire_bron,verificatiestatus," +
             "droge_bulk,natte_bulk,containers,break_bulk,passagiers,overig_goederen"
-          )
-          .range(from, from + BATCH - 1);
+          );
+        batchQ = applyColumnFiltersToQuery(batchQ, tableFilters);
+        const { data: rows } = await batchQ.range(from, from + BATCH - 1);
 
-        if (!rows || rows.length === 0) break;
+        if (cancelled || !rows || rows.length === 0) break;
         acc.push(...(rows as unknown as MapLocation[]));
         setLoaded(acc.length);
         from += BATCH;
         if (rows.length < BATCH) break;
       }
 
-      setLocations(acc);
+      if (!cancelled) setLocations(acc);
     }
     fetchAll();
-  }, []);
+    return () => { cancelled = true; };
+  }, [tableFilters]);
+
+  function clearTableFilters() {
+    writeSessionState(TABLE_FILTERS_KEY, []);
+    setTableFilters([]);
+  }
 
   const isLoading = total === null || loaded < (total ?? 0);
 
@@ -508,7 +520,7 @@ export function LocationsMap() {
     () => applyFilters(locations, filters),
     [locations, filters]
   );
-  const active = isFiltersActive(filters);
+  const active = isFiltersActive(filters) || tableFilters.length > 0;
 
   return (
     <div className="relative h-full">
@@ -576,6 +588,8 @@ export function LocationsMap() {
         onClose={() => setSidebarOpen(false)}
         filters={filters}
         setFilters={setFilters}
+        tableFilters={tableFilters}
+        onClearTableFilters={clearTableFilters}
         visibleCount={filteredLocations.length}
         totalCount={locations.length}
       />

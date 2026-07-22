@@ -12,7 +12,16 @@ import {
 } from "@tanstack/react-table";
 import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
-import { useSessionState } from "@/lib/use-session-state";
+import { readSessionState, useSessionState, writeSessionState } from "@/lib/use-session-state";
+import {
+  type MapFilters,
+  EMPTY_MAP_FILTERS,
+  isMapFiltersActive,
+  MAP_FILTERS_KEY,
+  TABLE_FILTERS_KEY,
+  applyColumnFiltersToQuery,
+  applyMapFiltersToQuery,
+} from "@/lib/location-filters";
 import {
   ChevronUp,
   ChevronDown,
@@ -327,9 +336,13 @@ export function LocationsTable() {
   const [loading, setLoading] = useState(true);
   const [pageIndex, setPageIndex] = useSessionState("tabel:pageIndex", 0);
   const [sorting, setSorting] = useSessionState<SortingState>("tabel:sorting", [{ id: "naam", desc: false }]);
-  const [columnFilters, setColumnFilters] = useSessionState<ColumnFiltersState>("tabel:columnFilters", []);
+  const [columnFilters, setColumnFilters] = useSessionState<ColumnFiltersState>(TABLE_FILTERS_KEY, []);
   const [debouncedFilters, setDebouncedFilters] = useState<ColumnFiltersState>(columnFilters);
   const [columnVisibility, setColumnVisibility] = useSessionState<VisibilityState>("tabel:columnVisibility", DEFAULT_VISIBILITY);
+  // Filters die in de Kaart-tab zijn ingesteld, gelden ook hier
+  const [mapFilters, setMapFilters] = useState<MapFilters>(() =>
+    readSessionState(MAP_FILTERS_KEY, EMPTY_MAP_FILTERS)
+  );
   const [colMenuOpen, setColMenuOpen] = useState(false);
   const colMenuRef = useRef<HTMLDivElement>(null);
 
@@ -375,38 +388,23 @@ export function LocationsTable() {
         .order(sortCol, { ascending: sortAsc })
         .range(from, to);
 
-      // Apply column filters
-      for (const f of debouncedFilters) {
-        const val = f.value as string;
-        if (!val && val !== "false") continue;
-
-        // Find meta for this column
-        const colDef = COLUMNS.find(
-          (c) => "accessorKey" in c && c.accessorKey === f.id
-        );
-        const filterType = (colDef as { meta?: { filterType?: string } })?.meta?.filterType;
-
-        if (filterType === "boolean") {
-          if (val === "null") q = q.is(f.id, null);
-          else q = q.eq(f.id, val === "true");
-        } else if (filterType === "select") {
-          q = q.eq(f.id, val);
-        } else if (filterType === "gte") {
-          const num = parseFloat(val);
-          if (!isNaN(num)) q = q.gte(f.id, num);
-        } else {
-          // text (default)
-          q = q.ilike(f.id, `%${val}%`);
-        }
-      }
+      q = applyColumnFiltersToQuery(q, debouncedFilters);
+      q = applyMapFiltersToQuery(q, mapFilters);
 
       const { data: rows, count } = await q;
+
+      // Herstelde pagina valt buiten het (gewijzigde) resultaat → terug naar p.1
+      if (typeof count === "number" && pageIndex > 0 && from >= count) {
+        setPageIndex(0);
+        return;
+      }
+
       setData((rows as Location[]) ?? []);
       setTotal(count ?? 0);
       setLoading(false);
     }
     load();
-  }, [pageIndex, sorting, debouncedFilters]);
+  }, [pageIndex, sorting, debouncedFilters, mapFilters, setPageIndex]);
 
   const table = useReactTable({
     data,
@@ -445,6 +443,19 @@ export function LocationsTable() {
             >
               <X className="w-3 h-3" />
               Wis filters ({columnFilters.length})
+            </button>
+          )}
+          {isMapFiltersActive(mapFilters) && (
+            <button
+              onClick={() => {
+                writeSessionState(MAP_FILTERS_KEY, EMPTY_MAP_FILTERS);
+                setMapFilters(EMPTY_MAP_FILTERS);
+              }}
+              title="Filters uit de Kaart-tab worden ook op de tabel toegepast. Klik om ze te wissen."
+              className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-blue/10 text-blue border border-blue/20 hover:bg-blue/20 transition-colors"
+            >
+              <X className="w-3 h-3" />
+              Kaartfilters actief — wis
             </button>
           )}
         </div>

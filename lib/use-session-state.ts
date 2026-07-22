@@ -6,6 +6,17 @@ import { useCallback, useState, type Dispatch, type SetStateAction } from "react
 // reset bij volledige page reload.
 const store = new Map<string, unknown>();
 
+// Directe toegang voor cross-tab gebruik. Werkt geen gemonteerde
+// useSessionState-hooks bij; alleen gebruiken voor state van een
+// component dat op dat moment niet gemount is (andere tab).
+export function readSessionState<T>(key: string, fallback: T): T {
+  return store.has(key) ? (store.get(key) as T) : fallback;
+}
+
+export function writeSessionState<T>(key: string, value: T): void {
+  store.set(key, value);
+}
+
 export function useSessionState<T>(key: string, initial: T): [T, Dispatch<SetStateAction<T>>] {
   const [value, setValue] = useState<T>(() =>
     store.has(key) ? (store.get(key) as T) : initial
