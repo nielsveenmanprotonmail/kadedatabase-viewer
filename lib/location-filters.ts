@@ -28,6 +28,7 @@ export const COLUMN_FILTERS: Record<string, { type: ColumnFilterType; label: str
   type_kade:             { type: "select",  label: "Type kade" },
   heeft_overslag:        { type: "boolean", label: "Overslag" },
   afmeren_mogelijk:      { type: "boolean", label: "Afmeren" },
+  container_lagen:       { type: "gte",     label: "Containerlagen" },
   primaire_bron:         { type: "select",  label: "Bron" },
   verificatiestatus:     { type: "select",  label: "Status" },
   gemeente:              { type: "text",    label: "Gemeente" },

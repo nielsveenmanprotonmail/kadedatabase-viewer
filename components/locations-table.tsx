@@ -82,6 +82,8 @@ export type Location = {
   natte_bulk: boolean | null;
   break_bulk: boolean | null;
   containers: boolean | null;
+  container_lagen: number | null;
+  container_lagen_opmerking: string | null;
   passagiers: boolean | null;
   overig_goederen: boolean | null;
   vaste_kraan: boolean | null;
@@ -204,6 +206,22 @@ const COLUMNS = [
     header: "Afmeren", size: 85,
     meta: { filterType: "boolean" },
     cell: (i) => <BoolCell value={i.getValue()} />,
+  }),
+  col.accessor("container_lagen", {
+    header: "Containerlagen", size: 125,
+    meta: { filterType: "gte" },
+    cell: (i) => {
+      const v = i.getValue();
+      if (v === null || v === undefined)
+        return <span className="text-gray-300 select-none">—</span>;
+      const opm = i.row.original.container_lagen_opmerking;
+      return (
+        <span title={opm ?? undefined}>
+          {v.toLocaleString("nl-NL")}
+          {opm && <span className="text-blue cursor-help"> *</span>}
+        </span>
+      );
+    },
   }),
   col.accessor("primaire_bron", {
     header: "Bron", size: 85,
