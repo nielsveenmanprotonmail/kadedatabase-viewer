@@ -51,6 +51,7 @@ export const COLUMN_FILTERS: Record<string, { type: ColumnFilterType; label: str
   droge_bulk:            { type: "boolean", label: "Droge bulk" },
   natte_bulk:            { type: "boolean", label: "Natte bulk" },
   containers:            { type: "boolean", label: "Containers" },
+  zeehaven_containerterminal: { type: "boolean", label: "Zeehaven-containerterminal" },
   break_bulk:            { type: "boolean", label: "Break bulk" },
   passagiers:            { type: "boolean", label: "Passagiers" },
   overig_goederen:       { type: "boolean", label: "Overig" },

@@ -66,6 +66,7 @@ type MapLocation = {
   containers: boolean | null;
   container_lagen: number | null;
   container_lagen_opmerking: string | null;
+  zeehaven_containerterminal: boolean | null;
   break_bulk: boolean | null;
   passagiers: boolean | null;
   overig_goederen: boolean | null;
@@ -151,6 +152,7 @@ function ClusteredMarkers({ locations }: { locations: MapLocation[] }) {
             ${loc.afmeren_mogelijk !== null ? ` &nbsp;·&nbsp; Afmeren: <b>${loc.afmeren_mogelijk ? "Ja" : "Nee"}</b>` : ""}
           </div>
           ${loc.container_lagen != null ? `<div style="margin-top:2px;font-size:11px;color:#777">Containerlagen: <b>${loc.container_lagen}</b>${loc.container_lagen_opmerking ? ` <span style="color:#999">(${loc.container_lagen_opmerking})</span>` : ""}</div>` : ""}
+          ${loc.zeehaven_containerterminal ? `<div style="margin-top:2px;font-size:11px;color:#009EE3;font-weight:500">Zeehaven-containerterminal met binnenvaartaansluiting</div>` : ""}
         </div>`;
 
       L.marker([Number(loc.lat), Number(loc.lon)], { icon })
@@ -495,7 +497,7 @@ export function LocationsMap() {
             "id,naam,plaatsnaam,lat,lon,type_kade,heeft_overslag,afmeren_mogelijk," +
             "primaire_bron,verificatiestatus," +
             "droge_bulk,natte_bulk,containers,container_lagen,container_lagen_opmerking," +
-            "break_bulk,passagiers,overig_goederen"
+            "zeehaven_containerterminal,break_bulk,passagiers,overig_goederen"
           );
         batchQ = applyColumnFiltersToQuery(batchQ, tableFilters);
         const { data: rows } = await batchQ.range(from, from + BATCH - 1);

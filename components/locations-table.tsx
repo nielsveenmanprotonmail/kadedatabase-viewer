@@ -84,6 +84,7 @@ export type Location = {
   containers: boolean | null;
   container_lagen: number | null;
   container_lagen_opmerking: string | null;
+  zeehaven_containerterminal: boolean | null;
   passagiers: boolean | null;
   overig_goederen: boolean | null;
   vaste_kraan: boolean | null;
@@ -297,6 +298,7 @@ const COLUMNS = [
   col.accessor("droge_bulk",      { header: "Droge bulk",  size: 90, meta: { filterType: "boolean" }, cell: (i) => <BoolCell value={i.getValue()} /> }),
   col.accessor("natte_bulk",      { header: "Natte bulk",  size: 90, meta: { filterType: "boolean" }, cell: (i) => <BoolCell value={i.getValue()} /> }),
   col.accessor("containers",      { header: "Containers",  size: 90, meta: { filterType: "boolean" }, cell: (i) => <BoolCell value={i.getValue()} /> }),
+  col.accessor("zeehaven_containerterminal", { header: "Zeehaven-CT", size: 110, meta: { filterType: "boolean" }, cell: (i) => <BoolCell value={i.getValue()} /> }),
   col.accessor("break_bulk",      { header: "Break bulk",  size: 90, meta: { filterType: "boolean" }, cell: (i) => <BoolCell value={i.getValue()} /> }),
   col.accessor("passagiers",      { header: "Passagiers",  size: 90, meta: { filterType: "boolean" }, cell: (i) => <BoolCell value={i.getValue()} /> }),
   col.accessor("overig_goederen", { header: "Overig",      size: 75, meta: { filterType: "boolean" }, cell: (i) => <BoolCell value={i.getValue()} /> }),
@@ -338,7 +340,7 @@ const DEFAULT_VISIBILITY: VisibilityState = {
   max_scheepslengte_m: false, max_scheepsbreedte_m: false, max_diepgang_m: false,
   max_doorvaarthoogte_m: false, max_duwvaartlengte_m: false, max_duwvaartbreedte_m: false,
   aantal_bolders: false, adn_klasse: false,
-  droge_bulk: false, natte_bulk: false, containers: false, break_bulk: false,
+  droge_bulk: false, natte_bulk: false, containers: false, zeehaven_containerterminal: false, break_bulk: false,
   passagiers: false, overig_goederen: false, brandstoflevering: false, pomp: false,
   vaste_kraan: false, mobiele_kraan: false,
   opmerking: false, gewijzigd_door_bron: false, bijgewerkt_op: false, lat: false, lon: false,
