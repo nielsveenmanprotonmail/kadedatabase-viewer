@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { NavTabs } from "@/components/nav-tabs";
+import { AuthButton } from "@/components/auth-button";
 
 export const metadata: Metadata = {
   title: "Kadedatabase | Topsector Logistiek",
@@ -37,8 +38,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
         {/* Tab navigation — sticky */}
         <div className="sticky top-0 z-[1001] bg-white border-b border-gray-light shadow-sm">
-          <div className="max-w-screen-xl mx-auto px-6">
+          <div className="max-w-screen-xl mx-auto px-6 flex items-center justify-between gap-4">
             <NavTabs />
+            <AuthButton />
           </div>
         </div>
 
