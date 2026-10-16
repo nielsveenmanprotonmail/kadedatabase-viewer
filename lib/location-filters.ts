@@ -6,13 +6,14 @@
 export const TABLE_FILTERS_KEY = "tabel:columnFilters";
 export const MAP_FILTERS_KEY = "kaart:filters";
 
+// Waarden gelijk aan de DB-CHECK-constraint op public.locations.type_kade.
 export const TYPE_KADE_LABEL: Record<string, string> = {
-  verharde_kade:     "Verharde kade",
-  wachtplaats:       "Wachtplaats",
-  onverharde_kade:   "Onverharde kade",
-  steiger:           "Steiger",
-  aanlegpaal:        "Aanlegpaal",
-  drijvende_steiger: "Drijvende steiger",
+  verharde_kade:         "Verharde kade",
+  onverharde_kade:       "Onverharde kade",
+  oever_meerpalen:       "Oever met meerpalen",
+  overdekte_overslaghal: "Overdekte overslaghal",
+  veerstoep:             "Veerstoep",
+  wachtplaats:           "Wachtplaats",
 };
 
 // ─── Tabel-kolomfilters ───────────────────────────────────────────────────────
