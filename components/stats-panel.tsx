@@ -144,13 +144,13 @@ export function StatsPanel() {
 
   // Type kade (excl null → grouped as "Onbekend")
   const typeKadeData = countBy(rows, "type_kade", {
-    verharde_kade:     "Verharde kade",
-    wachtplaats:       "Wachtplaats",
-    onverharde_kade:   "Onverharde kade",
-    steiger:           "Steiger",
-    aanlegpaal:        "Aanlegpaal",
-    drijvende_steiger: "Drijvende steiger",
-    Onbekend:          "Niet ingevuld",
+    verharde_kade:         "Verharde kade",
+    onverharde_kade:       "Onverharde kade",
+    oever_meerpalen:       "Oever met meerpalen",
+    overdekte_overslaghal: "Overdekte overslaghal",
+    veerstoep:             "Veerstoep",
+    wachtplaats:           "Wachtplaats",
+    Onbekend:              "Niet ingevuld",
   });
   const typeKadeColors = [C.gray, C.blue, C.navy, C.teal, C.blueMid, C.lime, C.navyDeep];
 

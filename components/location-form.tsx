@@ -9,7 +9,8 @@ import {
   EDITABLE_FIELDS,
   FIELD_GROUPS,
   EDITABLE_COLUMNS,
-  type EditableField,
+  INSERT_ONLY_FIELDS,
+  type FormField,
   type EditablePayload,
 } from "@/lib/editable-columns";
 import { cn } from "@/lib/utils";
@@ -23,7 +24,7 @@ type FormValues = Record<string, FieldValue>;
 
 function emptyValues(): FormValues {
   const v: FormValues = {};
-  for (const f of EDITABLE_FIELDS) {
+  for (const f of [...EDITABLE_FIELDS, ...INSERT_ONLY_FIELDS]) {
     v[f.key] = f.type === "boolean" ? null : "";
   }
   return v;
@@ -46,54 +47,53 @@ function valuesFromRecord(rec: Partial<Location>): FormValues {
 }
 
 // ─── Validatie & payload-opbouw ─────────────────────────────────────────────
-function validateAndBuild(values: FormValues): {
-  errors: Record<string, string>;
-  payload: EditablePayload;
-} {
+
+function isRequired(f: FormField, isEdit: boolean): boolean {
+  return Boolean(f.required || (isEdit && f.requiredOnEdit));
+}
+
+// Valideert één veld en levert de genormaliseerde waarde voor de payload.
+function validateField(
+  f: FormField,
+  raw: FieldValue,
+  isEdit: boolean
+): { error?: string; value: unknown } {
+  const req = isRequired(f, isEdit);
+
+  if (f.type === "boolean") {
+    return { value: raw }; // tri-state: null (onbekend) is toegestaan
+  }
+
+  if (f.type === "number") {
+    const s = String(raw ?? "").trim();
+    if (s === "") return req ? { error: "Dit veld is verplicht.", value: null } : { value: null };
+    const n = Number(s.replace(",", "."));
+    if (Number.isNaN(n)) return { error: "Vul een geldig getal in.", value: null };
+    if (f.integer && !Number.isInteger(n)) return { error: "Vul een heel getal in.", value: null };
+    if (f.min !== undefined && n < f.min) return { error: `Mag niet kleiner zijn dan ${f.min}.`, value: null };
+    if (f.max !== undefined && n > f.max) return { error: `Mag niet groter zijn dan ${f.max}.`, value: null };
+    return { value: n };
+  }
+
+  // text / textarea / select / date
+  const s = String(raw ?? "").trim();
+  if (req && s === "") return { error: "Dit veld is verplicht.", value: null };
+  return { value: s === "" ? null : s };
+}
+
+// Bouwt de payload van de bewerkbare "veilige set". lat/lon horen hier NIET bij
+// (die worden alleen bij insert apart toegevoegd — zie handleSubmit).
+function validateAndBuild(
+  values: FormValues,
+  isEdit: boolean
+): { errors: Record<string, string>; payload: EditablePayload } {
   const errors: Record<string, string> = {};
   const payload: Record<string, unknown> = {};
 
   for (const f of EDITABLE_FIELDS) {
-    const val = values[f.key];
-
-    if (f.type === "boolean") {
-      payload[f.key] = val; // true | false | null
-      continue;
-    }
-
-    if (f.type === "number") {
-      const s = String(val ?? "").trim();
-      if (s === "") {
-        payload[f.key] = null;
-        continue;
-      }
-      const n = Number(s.replace(",", "."));
-      if (Number.isNaN(n)) {
-        errors[f.key] = "Vul een geldig getal in.";
-        continue;
-      }
-      if (f.integer && !Number.isInteger(n)) {
-        errors[f.key] = "Vul een heel getal in.";
-        continue;
-      }
-      if (f.min !== undefined && n < f.min) {
-        errors[f.key] = `Mag niet kleiner zijn dan ${f.min}.`;
-        continue;
-      }
-      if (f.max !== undefined && n > f.max) {
-        errors[f.key] = `Mag niet groter zijn dan ${f.max}.`;
-        continue;
-      }
-      payload[f.key] = n;
-      continue;
-    }
-
-    // text / textarea / select / date
-    const s = String(val ?? "").trim();
-    if (f.required && s === "") {
-      errors[f.key] = "Dit veld is verplicht.";
-    }
-    payload[f.key] = s === "" ? null : s;
+    const r = validateField(f, values[f.key], isEdit);
+    if (r.error) errors[f.key] = r.error;
+    payload[f.key] = r.value;
   }
 
   // Alleen bewerkbare kolommen meenemen (dubbele veiligheid naast het model).
@@ -152,19 +152,22 @@ function Field({
   field,
   value,
   error,
+  isEdit,
   onChange,
 }: {
-  field: EditableField;
+  field: FormField;
   value: FieldValue;
   error?: string;
+  isEdit: boolean;
   onChange: (v: FieldValue) => void;
 }) {
   const id = `field-${field.key}`;
+  const required = isRequired(field, isEdit);
   return (
     <div className={cn("flex flex-col gap-1.5", field.type === "textarea" && "sm:col-span-2")}>
       <label htmlFor={id} className="text-sm font-medium text-navy">
         {field.label}
-        {field.required && <span className="text-red-500 ml-0.5" title="Verplicht">*</span>}
+        {required && <span className="text-red-500 ml-0.5" title="Verplicht">*</span>}
         {field.unit && <span className="text-navy/40 font-normal ml-1">({field.unit})</span>}
       </label>
 
@@ -269,11 +272,15 @@ export function LocationForm({ id }: { id?: string }) {
   }, [id]);
 
   const groupedFields = useMemo(() => {
-    return FIELD_GROUPS.map((group) => ({
-      group,
-      fields: EDITABLE_FIELDS.filter((f) => f.group === group),
-    }));
-  }, []);
+    return FIELD_GROUPS.map((group) => {
+      const fields: FormField[] = EDITABLE_FIELDS.filter((f) => f.group === group);
+      // lat/lon alleen tonen bij een nieuw record (insert-only).
+      if (!isEdit) {
+        fields.push(...INSERT_ONLY_FIELDS.filter((f) => f.group === group));
+      }
+      return { group, fields };
+    });
+  }, [isEdit]);
 
   function setField(key: string, v: FieldValue) {
     setValues((prev) => ({ ...prev, [key]: v }));
@@ -285,7 +292,19 @@ export function LocationForm({ id }: { id?: string }) {
     setSaveError(null);
     setSuccess(null);
 
-    const { errors: errs, payload } = validateAndBuild(values);
+    const { errors: errs, payload } = validateAndBuild(values, isEdit);
+
+    // Coördinaten alleen bij een nieuw record valideren en meesturen.
+    // (De DB geeft bewust wél insert-, maar géén update-recht op lat/lon.)
+    const coords: Record<string, unknown> = {};
+    if (!isEdit) {
+      for (const f of INSERT_ONLY_FIELDS) {
+        const r = validateField(f, values[f.key], isEdit);
+        if (r.error) errs[f.key] = r.error;
+        else coords[f.key] = r.value;
+      }
+    }
+
     setErrors(errs);
     if (Object.keys(errs).length > 0) {
       setSaveError("Er zijn nog velden met een fout. Controleer de gemarkeerde velden.");
@@ -310,7 +329,7 @@ export function LocationForm({ id }: { id?: string }) {
     } else {
       const { data, error } = await supabase
         .from("locations")
-        .insert(payload)
+        .insert({ ...payload, ...coords })
         .select("id")
         .single();
       setSaving(false);
@@ -381,6 +400,7 @@ export function LocationForm({ id }: { id?: string }) {
                   field={f}
                   value={values[f.key]}
                   error={errors[f.key]}
+                  isEdit={isEdit}
                   onChange={(v) => setField(f.key, v)}
                 />
               ))}

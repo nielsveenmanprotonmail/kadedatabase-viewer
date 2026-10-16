@@ -37,8 +37,14 @@ export type EditableField = {
   type: EditableFieldType;
   /** Groepskop waaronder het veld in het formulier valt. */
   group: FieldGroup;
-  /** Verplicht veld (client-side gemarkeerd + gevalideerd). */
+  /** Altijd verplicht (client-side gemarkeerd + gevalideerd). */
   required?: boolean;
+  /**
+   * Alleen verplicht bij BEWERKEN. Bij een nieuw record mag het leeg blijven
+   * (bv. verificatiestatus: de DB-trigger vult dan een default). De kolom is
+   * wel NOT NULL in de database.
+   */
+  requiredOnEdit?: boolean;
   /** Eenheid die achter een getalveld wordt getoond (bv. "m", "m²", "%"). */
   unit?: string;
   /** Alleen gehele getallen toestaan. */
@@ -68,14 +74,16 @@ export const TYPE_KADE_OPTIONS: SelectOption[] = Object.entries(TYPE_KADE_LABEL)
   ([value, label]) => ({ value, label })
 );
 
+// Waarden gelijk aan de DB-CHECK-constraint op verificatiestatus.
 export const VERIFICATIESTATUS_OPTIONS: SelectOption[] = [
   { value: "automatisch", label: "Automatisch" },
-  { value: "handmatig", label: "Handmatig" },
-  { value: "geverifieerd", label: "Geverifieerd" },
+  { value: "expert", label: "Expert" },
+  { value: "schipper", label: "Schipper" },
 ];
 
+// Waarden gelijk aan de DB-CHECK-constraint op cemt_klasse (geen VII).
 export const CEMT_KLASSE_OPTIONS: SelectOption[] = [
-  "0", "I", "II", "III", "IV", "Va", "Vb", "VIa", "VIb", "VIc", "VII",
+  "0", "I", "II", "III", "IV", "Va", "Vb", "VIa", "VIb", "VIc",
 ].map((v) => ({ value: v, label: v }));
 
 // ─── De veldlijst in formulier-volgorde ───────────────────────────────────────
@@ -141,10 +149,23 @@ export const EDITABLE_FIELDS: EditableField[] = [
   { key: "vergunningsinformatie", label: "Vergunningsinformatie", type: "textarea", group: "Milieu & vergunning" },
 
   // Verificatie & notities
-  { key: "verificatiestatus", label: "Verificatiestatus", type: "select", group: "Verificatie & notities", options: VERIFICATIESTATUS_OPTIONS },
+  { key: "verificatiestatus", label: "Verificatiestatus", type: "select", group: "Verificatie & notities", options: VERIFICATIESTATUS_OPTIONS, requiredOnEdit: true, help: "Verplicht bij bewerken. Laat bij een nieuw record leeg om de database een standaardwaarde te laten zetten." },
   { key: "verificatiedatum", label: "Verificatiedatum", type: "date", group: "Verificatie & notities" },
   { key: "mapillary_link", label: "Mapillary-link", type: "text", group: "Verificatie & notities", help: "URL naar een straatbeeld/foto." },
   { key: "opmerking", label: "Opmerking", type: "textarea", group: "Verificatie & notities" },
+];
+
+// Een veld zoals het formulier het rendert — ruimer dan EditableField, zodat
+// ook de insert-only coördinaten (lat/lon) via dezelfde widget kunnen.
+export type FormField = Omit<EditableField, "key"> & { key: string };
+
+// Coördinaten: alleen bij een NIEUW record getoond en meegestuurd.
+// De DB geeft bewust wél insert-, maar géén update-recht op lat/lon; bij
+// bewerken blijven ze dus buiten het formulier én buiten de payload.
+// lat/lon zijn in de database NOT NULL zonder default.
+export const INSERT_ONLY_FIELDS: FormField[] = [
+  { key: "lat", label: "Latitude", type: "number", group: "Ligging", required: true, min: -90, max: 90, help: "Breedtegraad tussen -90 en 90 (bv. 51.92)." },
+  { key: "lon", label: "Longitude", type: "number", group: "Ligging", required: true, min: -180, max: 180, help: "Lengtegraad tussen -180 en 180 (bv. 4.48)." },
 ];
 
 // De groepen in weergavevolgorde.

@@ -82,9 +82,9 @@ const BRON_OPTIONS = [
 ];
 
 const STATUS_OPTIONS = [
-  { value: "automatisch",  label: "Automatisch" },
-  { value: "handmatig",    label: "Handmatig" },
-  { value: "geverifieerd", label: "Geverifieerd" },
+  { value: "automatisch", label: "Automatisch" },
+  { value: "expert",      label: "Expert" },
+  { value: "schipper",    label: "Schipper" },
 ];
 
 const CARGO_OPTIONS: { value: CargoKey; label: string }[] = [
