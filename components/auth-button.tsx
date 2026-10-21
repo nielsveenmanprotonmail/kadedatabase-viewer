@@ -5,10 +5,11 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
-import { LogIn, LogOut, Settings } from "lucide-react";
+import { LogOut, Settings } from "lucide-react";
 
 // Toont rechts in de nav de sessiestatus:
-//  - uitgelogd → "Inloggen"
+//  - uitgelogd → niets (login is bewust alleen via de directe /login-URL,
+//    die alleen beheerders kennen — geen knop in de publieke UI)
 //  - ingelogd  → "Beheer"-link + "Uitloggen"-knop (met e-mail)
 export function AuthButton() {
   const router = useRouter();
@@ -44,17 +45,8 @@ export function AuthButton() {
   // Niets tonen tot de sessiestatus bekend is (voorkomt knipperen).
   if (!ready) return <div className="w-px" aria-hidden />;
 
-  if (!email) {
-    return (
-      <Link
-        href="/login"
-        className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md border border-gray-light text-navy hover:border-navy/30 transition-colors"
-      >
-        <LogIn className="w-4 h-4" />
-        Inloggen
-      </Link>
-    );
-  }
+  // Uitgelogd: geen knop tonen. /login blijft bereikbaar via de directe URL.
+  if (!email) return <div className="w-px" aria-hidden />;
 
   const beheerActive = pathname.startsWith("/beheer");
 
