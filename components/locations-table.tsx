@@ -113,11 +113,11 @@ export type Location = {
 
 const TYPE_KADE_LABEL: Record<string, string> = {
   verharde_kade: "Verharde kade",
-  wachtplaats: "Wachtplaats",
   onverharde_kade: "Onverharde kade",
-  steiger: "Steiger",
-  aanlegpaal: "Aanlegpaal",
-  drijvende_steiger: "Drijvende steiger",
+  oever_meerpalen: "Oever met meerpalen",
+  overdekte_overslaghal: "Overdekte overslaghal",
+  veerstoep: "Veerstoep",
+  wachtplaats: "Wachtplaats",
 };
 
 function BoolCell({ value }: { value: boolean | null }) {
@@ -134,8 +134,8 @@ function StatusBadge({ value }: { value: string | null }) {
   if (!value) return null;
   const styles: Record<string, string> = {
     automatisch: "bg-blue/10 text-blue border-blue/20",
-    handmatig: "bg-lime/20 text-navy border-lime/30",
-    geverifieerd: "bg-lime/40 text-navy-deep border-lime/50 font-semibold",
+    schipper: "bg-lime/20 text-navy border-lime/30",
+    expert: "bg-lime/40 text-navy-deep border-lime/50 font-semibold",
   };
   return (
     <span className={cn("inline-block px-2 py-0.5 rounded text-xs border", styles[value] ?? "bg-gray-light text-navy/60 border-gray-light")}>
@@ -155,18 +155,18 @@ function NumCell({ value }: { value: number | null }) {
 const col = createColumnHelper<Location>();
 
 const TYPE_KADE_OPTIONS = [
-  { value: "verharde_kade",    label: "Verharde kade" },
-  { value: "wachtplaats",      label: "Wachtplaats" },
-  { value: "onverharde_kade",  label: "Onverharde kade" },
-  { value: "steiger",          label: "Steiger" },
-  { value: "aanlegpaal",       label: "Aanlegpaal" },
-  { value: "drijvende_steiger",label: "Drijvende steiger" },
+  { value: "verharde_kade",         label: "Verharde kade" },
+  { value: "onverharde_kade",       label: "Onverharde kade" },
+  { value: "oever_meerpalen",       label: "Oever met meerpalen" },
+  { value: "overdekte_overslaghal", label: "Overdekte overslaghal" },
+  { value: "veerstoep",             label: "Veerstoep" },
+  { value: "wachtplaats",           label: "Wachtplaats" },
 ];
 
 const STATUS_OPTIONS = [
-  { value: "automatisch",  label: "Automatisch" },
-  { value: "handmatig",    label: "Handmatig" },
-  { value: "geverifieerd", label: "Geverifieerd" },
+  { value: "automatisch", label: "Automatisch" },
+  { value: "expert",      label: "Expert" },
+  { value: "schipper",    label: "Schipper" },
 ];
 
 const BRON_OPTIONS = [
@@ -175,7 +175,7 @@ const BRON_OPTIONS = [
   { value: "BTB",     label: "BTB" },
 ];
 
-const CEMT_OPTIONS = ["0", "I", "II", "III", "IV", "Va", "Vb", "VIa", "VIb", "VIc", "VII"].map(
+const CEMT_OPTIONS = ["0", "I", "II", "III", "IV", "Va", "Vb", "VIa", "VIb", "VIc"].map(
   (v) => ({ value: v, label: v })
 );
 
