@@ -107,6 +107,7 @@ export function StatsPanel() {
         const { data } = await supabase
           .from("locations")
           .select("type_kade,heeft_overslag,plaatsnaam,droge_bulk,natte_bulk,containers,break_bulk,passagiers,overig_goederen")
+          .eq("ontwikkelstatus", "bestaand")
           .range(from, from + BATCH - 1);
         if (!data || data.length === 0) break;
         acc.push(...(data as Row[]));
