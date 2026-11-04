@@ -405,6 +405,7 @@ export function LocationsTable() {
       let q: any = supabase
         .from("locations")
         .select("*", { count: "exact" })
+        .eq("ontwikkelstatus", "bestaand")
         .order(sortCol, { ascending: sortAsc })
         .range(from, to);
 

@@ -483,7 +483,8 @@ export function LocationsMap() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let countQ: any = supabase
         .from("locations")
-        .select("id", { count: "exact", head: true });
+        .select("id", { count: "exact", head: true })
+        .eq("ontwikkelstatus", "bestaand");
       countQ = applyColumnFiltersToQuery(countQ, tableFilters);
       const { count } = await countQ;
       if (cancelled) return;
@@ -498,7 +499,8 @@ export function LocationsMap() {
             "primaire_bron,verificatiestatus," +
             "droge_bulk,natte_bulk,containers,container_lagen,container_lagen_opmerking," +
             "zeehaven_containerterminal,break_bulk,passagiers,overig_goederen"
-          );
+          )
+          .eq("ontwikkelstatus", "bestaand");
         batchQ = applyColumnFiltersToQuery(batchQ, tableFilters);
         const { data: rows } = await batchQ.range(from, from + BATCH - 1);
 
